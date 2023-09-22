@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-data = np.loadtxt('C0014list.txt', delimiter=',')
+data = np.loadtxt('./info/infoC0014.txt', delimiter=',')
 
 frame_no = data[:,0]
 average_min = data[:,1]

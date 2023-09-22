@@ -1,10 +1,15 @@
+#!/usr/bin/env python
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 vidname = 'C0014'
-vidcap = cv2.VideoCapture('videos/' + vidname + '.mp4')
+vidcap = cv2.VideoCapture('./videos/' + vidname + '.mp4')
+total_frame_count = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
 
+pbar = tqdm(desc='READING FRAMES', total=total_frame_count, unit=' frames')
 frame_no = 0
 last_frame_print = -2
 
@@ -39,8 +44,10 @@ while(vidcap.isOpened()):
             last_frame_hsv = crop_frame_hsv
             last_av_crop = av_crop_frame
     else:
+        pbar.close()
         break
     frame_no += 1
+    pbar.update(1)
 
 if not first_frame:
     data = np.array(av_crop_frame_list)
