@@ -36,7 +36,7 @@ while(vidcap.isOpened()):
     if frame_exists:
         if args.first_frame:
             # curr_frame = curr_frame[1677:,3596:,:] # TOCO TESTS
-            cv2.imwrite("firstframes/frame"+args.vidname+".jpg", curr_frame)
+            cv2.imwrite(f"timeframes/firstframes/frame{args.vidname}.jpg", curr_frame)
             pbar.close()
             break
         else:
