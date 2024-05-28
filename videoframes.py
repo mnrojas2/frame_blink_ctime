@@ -47,7 +47,7 @@ def main():
         frame_exists, curr_frame = vidcap.read()
         if frame_exists: # and frame_no < 150
             if args.get_frames != [] and (frame_no+1) in args.get_frames:
-                cv2.imwrite(f"timeframes/{args.vidname}/getframe%d.jpg" % (frame_no+1), curr_frame)
+                cv2.imwrite(f"timeframes/firstframes/get{args.vidname}frame%d.jpg" % (frame_no+1), curr_frame)
                 list_frames.remove((frame_no+1))
                 if len(list_frames) == 0:
                     break

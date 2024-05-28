@@ -178,7 +178,7 @@ def decode_incl_word(incl_word):
     angle = float(incl_word[1:4]) + float(incl_word[4:6])/100
     return sign * angle
 
-def parse_source_logfile(filename, skip=10):
+def parse_source_logfile(filename, skip=10, show_labels=True):
     with open(filename, "r") as logfile:
         header = logfile.readline()
         header = header.split("=")[1]
@@ -196,7 +196,8 @@ def parse_source_logfile(filename, skip=10):
 
     data = {}
     for key in log_file_labels.keys():
-        print(key)
+        if show_labels:
+            print(key)
         par = log_file_labels[key]
         raw_data = np.loadtxt(filename, skiprows=skip+2, delimiter=",", usecols=(par["col"]), dtype=par["dtype"])
         data[key] = par["eval"](raw_data)
