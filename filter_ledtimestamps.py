@@ -77,7 +77,9 @@ def main():
         ax2.plot(smp, np.where(led_type_ft > 1, 1.05, 1), color='r', linestyle='', marker='o')
         ax2.set_ylabel('led_type', color='g')
         plt.title("Altitude & blink LEDs vs time (from logfile)")
-
+        
+        # Show the plots
+        plt.show()
 
     # Get starting point from first blink seen on video
     vid_start = 5 * v_blink[args.vidname][0] - v_blink[args.vidname][1]
@@ -120,12 +122,13 @@ def main():
     vidcap.release()
 
     frames = np.arange(0, total_frame_count, 1)
+    # frames = np.char.add('frame', frames.astype(str))
     
     # Create an array with timestamp values for each frame
     timestamps = t_fit[0] + (t_fit[-1] - t_fit[0])/(frame_list[-1] - frame_list[0]) * (frames - frame_list[0])
     dt_stamps = np.array([datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S.%f') for ts in timestamps])
     
     # Save the list of frames and timestamps
-    np.savetxt(f"./info/timelist{args.vidname}.txt", np.column_stack((frames, dt_stamps)), fmt='%s', delimiter=',', header='frame,timestamp', comments='')
+    np.savetxt(f"./info/timelist{args.vidname}.txt", np.column_stack((frames, dt_stamps)), fmt='%s', delimiter=',', header='frame,UTCtimestamp', comments='')
 
 if __name__=='__main__': main()

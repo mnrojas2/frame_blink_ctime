@@ -2,7 +2,6 @@ frames/*
 videos/*
 timeframes/*
 **_old**
-frametimetext/
-gpstimetext/
+gpstimetext/*
 **__pycache__/**
 info/*
