@@ -3,6 +3,7 @@ import numpy
 import argparse
 import droneData
 import numpy as np
+from datetime import datetime
 from matplotlib import pyplot as plt
 
 parser = argparse.ArgumentParser(description='Filters the timestamp where the leds blinked according to the system.')
@@ -46,9 +47,10 @@ led_time = data["LastLedCamTime"]
 led_type = data["LedCamType"]
 
 # Remove empty rows
+t_ft = t[led_time > 0]
 altitude_ft = altitude[led_time > 0]
 led_time_ft = led_time[led_time > 0]
-led_type_ft = led_type[led_type > 0]
+led_type_ft = led_type[led_time > 0]
 
 # Fix green blink in logfile data
 led_type_ft = fixLedType(led_type_ft)
@@ -71,13 +73,12 @@ ax2.plot(smp, led_type_ft, color='g', linestyle='', marker='o')
 ax2.plot(smp, np.where(led_type_ft > 1, 1.05, 1), color='r', linestyle='', marker='o')
 ax2.set_ylabel('led_type', color='g')
 
-# Show the plot
-plt.show()
-
 
 # Adjust logfile data to data from video
 vid_blinks = v_blink[args.vidname]
 vid_start = 5 * vid_blinks[0] - vid_blinks[1]
+
+t_fit = t_ft[vid_start:]
 altitude_fit = altitude_ft[vid_start:]
 led_time_fit = led_time_ft[vid_start:]
 led_type_fit = led_type_ft[vid_start:]
@@ -98,7 +99,13 @@ ax2.plot(smp, np.where(led_type_fit > 1, 1.05, 1), color='r', linestyle='', mark
 ax2.set_ylabel('led_type', color='g')
 
 # Show the plot
-plt.show()
+# plt.show()
 
-print(led_time_fit[0])
-print(led_time_fit[-1])
+frame_list = [int(x[5:-4]) for x in os.listdir(f"frames/{args.vidname}/")]
+frame_list.sort()
+
+frames = np.arange(0, 1+frame_list[-1], 1)
+timestamps = t_fit[0] + (t_fit[-1] - t_fit[0])/(frame_list[-1] - frame_list[0]) * (frames - frame_list[0])
+
+# Save the list of frames that have the LED turned on.
+np.savetxt(f"./info/timelist{args.vidname}.txt", np.column_stack((frames, timestamps)), fmt='%d,%1.4f', delimiter=',', header='frame,timestamp', comments='')

@@ -24,7 +24,7 @@ def main():
     list_frames = args.get_frames
     
     try:
-        new_list = [int(x[5:-4]) for x in os.listdir(f"timeframes/{args.vidname}/")]
+        new_list = [int(x[5:-4]) for x in os.listdir(f"frames/{args.vidname}/")]
         new_list.sort()
     except:
         new_list = []
@@ -47,20 +47,20 @@ def main():
         frame_exists, curr_frame = vidcap.read()
         if frame_exists: # and frame_no < 150
             if args.get_frames != [] and (frame_no+1) in args.get_frames:
-                cv2.imwrite(f"timeframes/firstframes/get{args.vidname}frame%d.jpg" % (frame_no+1), curr_frame)
+                cv2.imwrite(f"frames/firstframes/get{args.vidname}frame%d.jpg" % (frame_no+1), curr_frame)
                 list_frames.remove((frame_no+1))
                 if len(list_frames) == 0:
                     break
             
             if args.first_frame:
-                cv2.imwrite(f"timeframes/firstframes/frame{args.vidname}.jpg", curr_frame)
+                cv2.imwrite(f"frames/firstframes/frame{args.vidname}.jpg", curr_frame)
                 break
             else:
                 # Crop the whole image to focus only on the LED part
                 ncrop_frame = curr_frame[1677:,3596:,:]
                 
                 if args.cropped_frames and (frame_no+1) in new_list:
-                    cv2.imwrite(f"timeframes/{args.vidname}/frame%d.jpg" % (frame_no+1), ncrop_frame)
+                    cv2.imwrite(f"frames/{args.vidname}/frame%d.jpg" % (frame_no+1), ncrop_frame)
                 
                 # Apply a Gaussian blur and convert the matrix from RGB to HSV
                 ncrop_frame_gss = cv2.GaussianBlur(ncrop_frame,(251,251),0)
@@ -92,14 +92,14 @@ def main():
                     frame_stats_list.append(led_frame_stats)
 
                      # Create output folder if it wasn't created yet
-                    if not os.path.exists('timeframes/'+args.vidname):
-                        os.mkdir('timeframes/'+args.vidname)
+                    if not os.path.exists('frames/'+args.vidname):
+                        os.mkdir('frames/'+args.vidname)
                     
                     # Get the standard deviation between the 3 frame samples. 
                     if np.std((av_crop_frame_o[2], av_crop_frame_c[2], av_crop_frame_n[2])) > 1.1: # Arbitrary value after experimentation. If something is failing, it could be this.
                         if av_crop_frame_o[2] < av_crop_frame_c[2] and av_crop_frame_n[2] < av_crop_frame_c[2]:
                             if args.write:
-                                cv2.imwrite(f"timeframes/{args.vidname}/frame%d.jpg" % (frame_no), ccrop_frame)
+                                cv2.imwrite(f"frames/{args.vidname}/frame%d.jpg" % (frame_no), ccrop_frame)
                             frame_blink_list.append(frame_no)
                         
                     # Update old frames for next loop.
@@ -116,7 +116,7 @@ def main():
     vidcap.release()
 
     # Save the list of frames that have the LED turned on.
-    np.savetxt('./info/info'+ args.vidname +'.txt', frame_stats_list, fmt='%1.4f', delimiter=',', header="frame,min,max,max-min,std")
+    np.savetxt('./info/info'+ args.vidname +'.txt', frame_stats_list, fmt='%1.4f', delimiter=',', header="frame,min,max,range,std")
 
     plt.show()
     
