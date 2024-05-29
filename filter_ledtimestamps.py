@@ -3,6 +3,7 @@ import numpy
 import argparse
 import droneData
 import numpy as np
+import cv2
 from datetime import datetime
 from matplotlib import pyplot as plt
 
@@ -114,13 +115,17 @@ def main():
     frame_list.sort()
 
     # Create an array with values covering the complete video
-    end_frames = frame_list[-1]+1
-    frames = np.arange(0, end_frames, 1)
+    vidcap = cv2.VideoCapture(f"./videos/{args.vidname}.mp4")
+    total_frame_count = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+    vidcap.release()
+
+    frames = np.arange(0, total_frame_count, 1)
     
     # Create an array with timestamp values for each frame
     timestamps = t_fit[0] + (t_fit[-1] - t_fit[0])/(frame_list[-1] - frame_list[0]) * (frames - frame_list[0])
-
+    dt_stamps = np.array([datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S.%f') for ts in timestamps])
+    
     # Save the list of frames and timestamps
-    np.savetxt(f"./info/timelist{args.vidname}.txt", np.column_stack((frames, timestamps)), fmt='%d,%1.4f', delimiter=',', header='frame,timestamp', comments='')
+    np.savetxt(f"./info/timelist{args.vidname}.txt", np.column_stack((frames, dt_stamps)), fmt='%s', delimiter=',', header='frame,timestamp', comments='')
 
 if __name__=='__main__': main()

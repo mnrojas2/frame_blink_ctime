@@ -5,4 +5,4 @@ timeframes/*
 frametimetext/
 gpstimetext/
 **__pycache__/**
-info/
+info/*
