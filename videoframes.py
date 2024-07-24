@@ -10,6 +10,7 @@ import numpy as np
 import argparse
 from matplotlib import pyplot as plt
 from tqdm import tqdm
+import photutils
 
 # Initialize parser
 parser = argparse.ArgumentParser(description='Extracts frames from the specified video.')
@@ -57,7 +58,7 @@ def main():
                 break
             else:
                 # Crop the whole image to focus only on the LED part
-                ncrop_frame = curr_frame[1677:,3596:,:]
+                ncrop_frame = curr_frame[1678:2054,3609:,:]
                 
                 if args.cropped_frames and (frame_no+1) in new_list:
                     cv2.imwrite(f"frames/{args.vidname}/frame%d.jpg" % (frame_no+1), ncrop_frame)
