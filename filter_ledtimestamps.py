@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 
 import os
-import numpy
 import argparse
 import droneData
 import numpy as np
 import cv2
 from datetime import datetime
 from matplotlib import pyplot as plt
-
-parser = argparse.ArgumentParser(description='Filters the timestamp where the leds blinked according to the system.')
-parser.add_argument('vidname', type=str, help='Name of video (mp4 format).')
-parser.add_argument('-p', '--plot', action='store_true', default=False, help='Show plots from the process.')
 
 
 def fixLedType(ledtype):
@@ -23,8 +18,9 @@ def fixLedType(ledtype):
 
 # Main
 def main():
-    args = parser.parse_args()
-
+    # Get name of the file only
+    vidfile = os.path.basename(args.vidname)[:-4]
+    
     # Output logged files
     logfiles = {
         "C0008": "log_output_0429_095517.txt",
@@ -44,7 +40,7 @@ def main():
         "C0012": (1, 0)
     }
 
-    data, _ = droneData.parse_source_logfile(f"info/{logfiles[args.vidname]}", show_labels=False)
+    data, _ = droneData.parse_source_logfile(f"info/{logfiles[vidfile]}", show_labels=False)
 
     # Get data from logfile
     t = data["DateTimeRPI"]
@@ -84,7 +80,7 @@ def main():
         plt.show()
 
     # Get starting point from first blink seen on video
-    vid_start = 5 * v_blink[args.vidname][0] - v_blink[args.vidname][1]
+    vid_start = 5 * v_blink[vidfile][0] - v_blink[vidfile][1]
 
     # Adjust arrays to show only values seen on video
     t_fit = t_ft[vid_start:]
@@ -115,11 +111,11 @@ def main():
         plt.show()
 
     # Get list of frames where the led was blinking
-    frame_list = [int(x[5:-4]) for x in os.listdir(f"frames/{args.vidname}/")]
+    frame_list = [int(x[5:-4]) for x in os.listdir(f"frames/{vidfile}/")]
     frame_list.sort()
 
     # Create an array with values covering the complete video
-    vidcap = cv2.VideoCapture(f"./videos/{args.vidname}.mp4")
+    vidcap = cv2.VideoCapture(args.vidname)
     total_frame_count = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
     vidcap.release()
 
@@ -131,6 +127,17 @@ def main():
     dt_stamps = np.array([datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S.%f') for ts in timestamps])
     
     # Save the list of frames and timestamps
-    np.savetxt(f"./info/timelist{args.vidname}.txt", np.column_stack((frames, dt_stamps)), fmt='%s', delimiter=',', header='frame,UTCtimestamp', comments='')
+    np.savetxt(f"./info/timelist{vidfile}.txt", np.column_stack((frames, dt_stamps)), fmt='%s', delimiter=',', header='frame,UTCtimestamp', comments='')
 
-if __name__=='__main__': main()
+
+if __name__=='__main__': 
+    # Initialize parser
+    parser = argparse.ArgumentParser(description='Filters the timestamp where the leds blinked according to the system.')
+    parser.add_argument('vidname', type=str, help='Directory of video (mp4 format).')
+    parser.add_argument('-p', '--plot', action='store_true', default=False, help='Show plots from the process.')
+    
+    # Get all parser arguments
+    args = parser.parse_args()
+
+    # Main
+    main()

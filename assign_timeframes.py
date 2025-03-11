@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-##############################################################################
+"""
 # Reads the files to assign the timestamp of every frame of a recorded video #
-##############################################################################
+# Author: mnrojas2
+"""
 
 import cv2
 import numpy as np
@@ -10,13 +11,8 @@ import datetime
 import argparse
 from tqdm import tqdm
 
-# Initialize parser
-parser = argparse.ArgumentParser(description='Extracts frames from the specified video.')
-parser.add_argument('vidname', type=str, help='Name of video (mp4 format).')
-parser.add_argument('-wr', '--write', action='store_true', default=False, help='Enables saving frames with its corresponding timeframes (times 1000).')
 
 def main():
-    args = parser.parse_args()
     # Get data from txts. e.g: 'C0013'
     gpstime = np.genfromtxt('./gpstimetext/gpstime' + args.vidname + '.txt', dtype='str', delimiter='  ')  # Time data from GPS/RaspberryPi
     frame_blink_list = np.genfromtxt('./frametimetext/framelist' + args.vidname + '.txt')                  # Frame data from video
@@ -49,5 +45,16 @@ def main():
         pbar.update(1)
         
     # Make xlsx or csv file with frames and timestamp for each (float)
-        
-if __name__=='__main__': main()
+    
+
+if __name__=='__main__': 
+    # Initialize parser
+    parser = argparse.ArgumentParser(description='Extracts frames from the specified video.')
+    parser.add_argument('vidname', type=str, help='Directory of video (mp4 format).')
+    parser.add_argument('-wr', '--write', action='store_true', default=False, help='Enables saving frames with its corresponding timeframes (times 1000).')
+
+    # Get parser arguments
+    args = parser.parse_args()
+    
+    # Main    
+    main()
