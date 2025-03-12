@@ -53,7 +53,7 @@ def main():
                 break
             else:
                 # Crop the frame to get only the LED position
-                ncrop_frame = curr_frame[1678:2054,3609:,:]
+                ncrop_frame = curr_frame[1677:,3466:,:]
                 
                 if args.cropped_frames and (frame_no+1) in new_list:
                     cv2.imwrite(f"frames/{vidfile}/frame%d.jpg" % (frame_no+1), ncrop_frame)

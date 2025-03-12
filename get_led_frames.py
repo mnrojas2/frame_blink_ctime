@@ -24,9 +24,10 @@ def main():
     pbar = tqdm(desc='READING FRAMES', total=total_frame_count, unit=' frames', dynamic_ncols=True)
     frame_no = 0
 
-    # Create output folder if it wasn't created yet
-    if not os.path.exists('./timeframes/'+vidfile):
-        os.mkdir('./timeframes/'+vidfile)
+    # Create output folders if they weren't created yet
+    frames_path = os.path.normpath(os.path.dirname(args.vidname))+'/'+vidfile
+    if not os.path.exists(frames_path):
+        os.mkdir(frames_path)
 
     av_crop_frame_list = []
 
@@ -40,11 +41,11 @@ def main():
                 break
             else:
                 # Crop the image to the place the LED is.
-                crop_frame = curr_frame[1677:,3596:,:] # TOCO TESTS
+                crop_frame = curr_frame[1677:,3466:,:] # TOCO TESTS
                 
                 # Find frames listed at the start and save them
                 if list_frames != [] and frame_no in list_frames:
-                    cv.imwrite(f"./timeframes/{vidfile}/getframe%d.jpg" % frame_no, curr_frame)
+                    cv.imwrite(f"{frames_path}/gframe{frame_no}.jpg", curr_frame)
                     list_frames.remove(frame_no)
                     if len(list_frames) == 0:
                         pbar.close()
@@ -52,8 +53,7 @@ def main():
                 
                 # Save all frames
                 else:
-                    if args.write:            
-                        cv.imwrite(f"./timeframes/{vidfile}/frame%d.jpg" % frame_no, crop_frame)
+                    cv.imwrite(f"{frames_path}/frame{frame_no}.jpg", crop_frame)
                     crop_frame = cv.GaussianBlur(crop_frame,(251,251),0)
                     crop_frame_hsv = cv.cvtColor(crop_frame, cv.COLOR_BGR2HSV)
                     
