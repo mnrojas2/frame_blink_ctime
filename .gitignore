@@ -5,5 +5,4 @@ timeframes/*
 gpstimetext/*
 **__pycache__/**
 info/*
-*.jpg
-*.mp4
+vids/

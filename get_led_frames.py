@@ -18,7 +18,13 @@ def main():
 
     # Open the video
     vidcap = cv.VideoCapture(args.vidname)
+    
+    # Get total frame count and frames per second
     total_frame_count = int(vidcap.get(cv.CAP_PROP_FRAME_COUNT))
+    fps = vidcap.get(cv.CAP_PROP_FPS)
+
+    # Make a list with the timestamp of all frames
+    vidtimes = np.arange(total_frame_count)/fps
 
     # Initialize progress bar
     pbar = tqdm(desc='READING FRAMES', total=total_frame_count, unit=' frames', dynamic_ncols=True)
@@ -43,16 +49,16 @@ def main():
                 # Crop the image to the place the LED is.
                 crop_frame = curr_frame[1677:,3466:,:] # TOCO TESTS
                 
-                # Find frames listed at the start and save them
                 if list_frames != [] and frame_no in list_frames:
+                    # Find frames listed at the start and save them
                     cv.imwrite(f"{frames_path}/gframe{frame_no}.jpg", curr_frame)
                     list_frames.remove(frame_no)
                     if len(list_frames) == 0:
                         pbar.close()
                         break
                 
-                # Save all frames
                 else:
+                    # Save all frames
                     cv.imwrite(f"{frames_path}/frame{frame_no}.jpg", crop_frame)
                     crop_frame = cv.GaussianBlur(crop_frame,(251,251),0)
                     crop_frame_hsv = cv.cvtColor(crop_frame, cv.COLOR_BGR2HSV)
