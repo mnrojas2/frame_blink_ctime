@@ -76,7 +76,7 @@ def main():
         os.mkdir(frames_path)
 
     # Whileloop
-    while(vidcap.isOpened()) and frame_no <= 2650:
+    while(vidcap.isOpened()):
         # Get a frame from the video
         frame_exists, curr_frame = vidcap.read()
         if frame_exists: # and frame_no < 150
