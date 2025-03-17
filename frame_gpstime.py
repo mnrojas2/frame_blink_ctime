@@ -31,6 +31,27 @@ def load_ledlogfile(file):
     # Convert data list into numpy array
     return data_rows
 
+def load_blinkvideofile(file):
+    filetxt = open(file, 'r')
+    cols = filetxt.read()
+    all_lines = cols.split('\n')
+
+    vb_data = []
+
+    # Read txt data and save in list
+    for line in all_lines:
+        if line != '' and line[0] != '#':
+            # Frame number, time duration, led color
+            frame_no, vidtime, led_color_detected = line.split(',')
+            
+            # Convert from time duration format to seconds only
+            vid_timedelta = dt.datetime.strptime(vidtime, "%H:%M:%S.%f") - dt.datetime.strptime("0", "%S")
+            vidseconds = vid_timedelta.total_seconds()
+            
+            vb_data.append([int(frame_no), vidseconds, led_color_detected])
+    
+    return vb_data
+
 def filter_dynamic_step(array, tolerance=0.05):
     # Filter elements that are out of periodicity for led blinks (false positives)
     # Calculate consecutive differences
@@ -44,100 +65,118 @@ def filter_dynamic_step(array, tolerance=0.05):
     argidx = []
     
     # Filter elements that match the step pattern within a tolerance
-    for k in range(np.sum(counts)-np.argmax(counts)):
-        
+    for i in range(np.sum(counts) - np.argmax(counts)):
         # Filtered list always include the first value (if it does not work, try again with the following element of the original list)
-        filtered = [array[k]] 
-        for i in range(k+1, len(array)):
-            if abs(array[i] - filtered[-1] - estimated_step) <= tolerance:
-                filtered.append(array[i])
+        filtered = [array[i]]
+        
+        # Check all elements of the array from the starting point defined earlier
+        for j in range(i+1, len(array)):
+            # Check twice as there is a chance that the led detector algorithm could have skipped one blink
+            for k in range(3):
+                if abs(array[j] - filtered[-1] - estimated_step*(k+1)) <= tolerance*(k+1):
+                    filtered.append(array[j])
+                    break
             else:
-                argidx.append(i)
+                argidx.append(j)
 
         # Redo the filtering process if by using the k-element didn't produce a size good enough
         if len(filtered) >= np.argmax(counts):
             break
         else:
-            argidx = [kk for kk in range(k+1)]
+            argidx = [ii for ii in range(i+1)]
 
-    return np.array(filtered), argidx
+    # Return the removed elements index list and number of steps between every consecutive element
+    return argidx, np.diff(filtered)/estimated_step
 
+def fill_and_rename(gps_data, vb_data, vb_step):
+    # Localize skipped elements and fill them temporally (based on spacing between steps) to fit missing colors. 
+    # Initialize the list contaning temporal elements to compare led color order
+    vb_led_fill = []
 
+    # Check the head of the detected list to see if it's starting properly
+    if vb_data[0][2] != gps_data[0][1]:
+        vb_led_fill.append('f')
+    vb_led_fill.append(vb_data[0][2])
+
+    # Continue checking the rest of elements of the list adding elements if they are missing in list2
+    for i in range(1, len(vb_data)):
+        if vb_step[i-1] > 1:
+            for j in range(int(np.round(vb_step[i-1]))-1):
+                vb_led_fill.append('f')
+        vb_led_fill.append(vb_data[i][2])            
+
+    # Replace undefined detections to either red or green
+    for i in range(len(vb_led_fill)):
+        if vb_led_fill[i] == 'undefined':
+            vb_led_fill[i] = gps_data[i][1]
+
+    # Get the indexes for those elements that were added
+    indexes = [i for i in range(len(vb_led_fill)) if vb_led_fill[i] == 'f']
+    
+    # Return the list without missing colors and the indexes of the filled positions.
+    return vb_led_fill, indexes
 
 # Main
-gpstime_file = './vids/logfile_1215_182923_camera.txt'
-videoblinks_file = './vids/C0025_blinks_final.txt'
-frames_path = './vids/C0025'
+def main():
+    gpstime_file = './vids/logfile_1215_171954_camera.txt'
+    videoblinks_file = './vids/C0023_blinks.txt'
+    frames_path = './vids/C0025'
 
-# Get GPStime and led data from logfile
-gpstime_data = load_ledlogfile(gpstime_file)
+    total_frame_count = 24390
 
-# Open videoblinks_file
-filetxt = open(videoblinks_file, 'r')
-cols = filetxt.read()
-all_lines = cols.split('\n')
+    # Get GPStime and led data from logfile
+    gpstime_data = load_ledlogfile(gpstime_file)
 
-vidblinks_data = []
+    # Open video blinks file
+    vidblinks_data = load_blinkvideofile(videoblinks_file)
 
-# Read txt data and save in list
-for line in all_lines:
-    if line != '' and line[0] != '#':
-        # Frame number, time duration, led color
-        frame_no, vidtime, led_color_detected = line.split(',')
+    # Produce a numpy array only containing the time of detected frames
+    vidblinks_time = np.array([blink_event[1] for blink_event in vidblinks_data])
+
+    # Filter led blink false positives (positions that are not equally separated from the rest)
+    filtered_idx, vb_steps = filter_dynamic_step(vidblinks_time)
+    vidblinks_data_filtered = [vidblinks_data[i] for i in range(len(vidblinks_data)) if i not in filtered_idx]
+
+    vidblinks_led_filled, filled_indexes = fill_and_rename(gpstime_data, vidblinks_data_filtered, vb_steps)
+
+    # Remove skipped elements from videoframes and gpstime data
+    gpstime_data_filtered = [gpstime_data[i] for i in range(len(gpstime_data)) if i not in filled_indexes]
+    vidblinks_led_filtered = [vidblinks_led_filled[i] for i in range(len(gpstime_data)) if i not in filled_indexes]
+
+    # Repeat replacing undefined detections but this time in the video data array (perhaps pointless)
+    for i in range(len(vidblinks_data_filtered)):
+        if vidblinks_data_filtered[i][2] == 'undefined':
+            vidblinks_data_filtered[i][2] = vidblinks_led_filtered[i]
         
-        # Convert from time duration format to seconds only
-        vid_timedelta = dt.datetime.strptime(vidtime, "%H:%M:%S.%f") - dt.datetime.strptime("0", "%S")
-        vidseconds = vid_timedelta.total_seconds()
-        
-        vidblinks_data.append([int(frame_no), vidseconds, led_color_detected])
-        
-# Check stability of led blinks and remove those detections that don't happen in sync (false positives)
-
-# Produce a numpy array only containing the time of detected frames
-vidblinks_time = np.array([blink_event[1] for blink_event in vidblinks_data])
-
-# Filter led blink false positives
-vidblinks_time_filtered, filtered_idx = filter_dynamic_step(vidblinks_time)
-vidblinks_data_filtered = [vidblinks_data[i] for i in range(len(vidblinks_data)) if i not in filtered_idx]
-
-# Merge this information with gpstime blink control data
-vidblinks_leds = [viditem[2] for viditem in vidblinks_data_filtered]
-gpstime_leds = [gpsitem[1] for gpsitem in gpstime_data]
-
-# if both have the same led order and number ==> ok
-# if both have the same led order but one of them is smaller ==> cut longer (check if there are missing led blinks)
-# if both start with different starting points ==> fix shifting by removing first elements to get the closest match (based on the location of green led in both)
-# if it contains undefined, but follows the split ==> change it to corresponding color
-
-if vidblinks_leds == gpstime_leds:
+    # Get list of blink frames and gps time to associate both
     vidblink_frames = np.array([viditem[0] for viditem in vidblinks_data_filtered])
-    gpstime_timestamp = np.array([gpsitem[0] for gpsitem in gpstime_data])
+    gpstime_timestamp = np.array([gpsitem[0] for gpsitem in gpstime_data_filtered])
 
     # Fit a projection to adjust slopes
-    coefficients = np.polyfit(gpstime_timestamp, vidblink_frames, deg=1)  # Fit a 1st-degree polynomial (linear)
-    proj_timeblinks = np.polyval(coefficients, gpstime_timestamp)  # Adjusted y-values based on projection
+    coefficients = np.polyfit(gpstime_timestamp, vidblink_frames, deg=1)    # Fit a 1st-degree polynomial (linear)
+    proj_timeblinks = np.polyval(coefficients, gpstime_timestamp)           # Adjusted y-values based on projection
 
     # Perform interpolation
-    interp_func = interp1d(proj_timeblinks, gpstime_timestamp, kind='linear', fill_value="extrapolate")  # 'cubic' for smooth interpolation
+    interp_func = interp1d(proj_timeblinks, gpstime_timestamp, kind='linear', fill_value="extrapolate")
 
     # Get the interpolated time for each frame
-    total_frame_count = 19000
     framecount = np.arange((total_frame_count))
     gpstime_framecount = interp_func(framecount)
-    
-    for i in range(vidblink_frames.shape[0]):
-        print(vidblink_frames[i], gpstime_timestamp[i])
-    
+
     # Save the information in a new txt file
     frame_time = np.column_stack((framecount, gpstime_framecount))
     np.savetxt(f"{frames_path}_gpstime.txt", frame_time, fmt= '%.6f', delimiter=',', header="frame, timestamp")
-    
-    
+    print(f"Video-GPStime syncronization results in {frames_path}_gpstime.txt!")
 
-plt.figure()
-plt.plot(vidblinks_time, '.', c='g')
-plt.plot(vidblinks_time_filtered, '.', c='r')
+    plt.figure()
+    plt.plot([item[0] for item in vidblinks_data], vidblinks_time, '.', c='g')
+    plt.plot(vidblink_frames, [item[1] for item in vidblinks_data_filtered], '.', c='r')
+    
+    plt.figure()
+    plt.plot(framecount, gpstime_framecount, '.', c='y')
+    plt.plot(vidblink_frames, gpstime_timestamp, '.', c='b')
+    plt.show()    
 
-plt.figure()
-plt.plot(gpstime_framecount, '.', c='cyan')
-plt.show()
+if __name__ == '__main__':
+    main()
+    

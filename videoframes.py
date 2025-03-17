@@ -135,7 +135,7 @@ def main():
                                 led_col = 'undefined'
                             
                             # Save the frame name, video time and color defined
-                            print('\n', frame_no, dt.timedelta(seconds=vidtimes[frame_no]))
+                            # print('\n', frame_no, dt.timedelta(seconds=vidtimes[frame_no]))
                             frame_blink_list.append([frame_no, dt.timedelta(seconds=vidtimes[frame_no]), led_col])
                         
                     # Update old frames for next loop.
@@ -164,45 +164,6 @@ def main():
     
     # Save data from the comparison between contiguous frames in relation with the brightness
     np.savetxt(f"{frames_path}_stats.txt", frame_stats_list, fmt='%1.4f', delimiter=',', header="frame,min,max,range,std")
-
-    # Get GPStime and led data from logfile
-    gpstime_log = load_ledlogfile('./vids/logfile_1215_182923_camera.txt')
-    
-    ### Remove points that are undefined, keep those that are to be sure good
-    time_blinks = np.array([x[1].total_seconds() for x in frame_blink_list])
-    
-    tb_diff = np.diff(time_blinks)
-    # Get blink timestamps from video data
-    for frame_data in frame_blink_list:
-        frame_num = frame_data[0]
-        frame_timedelta = frame_data[1].total_seconds()
-        frame_ledcolor = frame_data[2]
-        
-        if frame_ledcolor == 'undefined':
-            # remove row #
-            cdad = 0
-            
-    
-
-    ### Sync gpstime data with video points
-    # if gpstime[0].color == frame_data.color -> it's sync else move until both are green
-    
-    # Interpolate frames
-    """
-    # Fit a projection to adjust slopes
-    coefficients = np.polyfit(gpstime, time_blinks, deg=1)  # Fit a 1st-degree polynomial (linear)
-    proj_timeblinks = np.polyval(coefficients, gpstime)  # Adjusted y-values based on projection
-
-    # Perform interpolation
-    interp_func = interp1d(x, proj_timeblinks, kind='cubic', fill_value="extrapolate")  # 'cubic' for smooth interpolation
-
-    # Interpolated x-values
-    framecount = np.arange((total_frame_count))
-    gpstime_framecount = interp_func(framecount)
-    """
-    
-    
-    ### Return a txt with all frames with gpstime
 
 
 if __name__=='__main__': 
