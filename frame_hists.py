@@ -23,10 +23,10 @@ def main():
     average_std = data[:,4]
 
     fig, axs = plt.subplots(1, 4, sharey=True, tight_layout=True, figsize=(15, 5))
-    axs[0].hist(average_min, color='magenta', ec='black', bins=9)
-    axs[1].hist(average_max, color='yellow', ec='black', bins=9)
-    axs[2].hist(average_diff, color='cyan', ec='black', bins=9)
-    axs[3].hist(average_std, color='lightgreen', ec='black', bins=9)
+    axs[0].hist(average_min, color='magenta', ec='black', bins=50)
+    axs[1].hist(average_max, color='yellow', ec='black', bins=50)
+    axs[2].hist(average_diff, color='cyan', ec='black', bins=50)
+    axs[3].hist(average_std, color='lightgreen', ec='black', bins=50)
 
     axs[0].title.set_text('Min')
     axs[1].title.set_text('Max')
@@ -37,7 +37,7 @@ def main():
     
 if __name__ == '__main__':
     # Initialize parser
-    parser = argparse.ArgumentParser(description='Read an info file, then plot an histogram with its data.')
+    parser = argparse.ArgumentParser(description='Read an stats file, then plot an histogram with its data.')
     parser.add_argument('file', type=str, help='Name of the txt file containing timedata to plot.')
 
     # Get parser arguments

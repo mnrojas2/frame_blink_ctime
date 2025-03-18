@@ -90,13 +90,9 @@ def main():
                 if len(list_frames) == 0:
                     break
             
-            
             else:
                 # Crop the frame to get only the LED position
                 ncrop_frame = curr_frame[1677:,3466:,:] 
-                
-                if args.cropped_frames and (frame_no+1) in new_list:
-                    cv.imwrite(f"{frames_path}/frame{(frame_no+1)}.jpg", ncrop_frame)
                 
                 # Apply a Gaussian blur and convert the matrix from RGB to HSV
                 ncrop_frame_gss = cv.GaussianBlur(ncrop_frame,(251,251),0)
@@ -160,7 +156,7 @@ def main():
     vidcap.release()
 
     # Save the list of frames that have the LED turned on.
-    np.savetxt(f"{frames_path}_blinks.txt", frame_blink_list, fmt= '%s', delimiter=',', header="name,vidtime,color")
+    np.savetxt(f"{frames_path}_blinks.txt", frame_blink_list, fmt= '%s', delimiter=',', header=f"name,vidtime,color \ntotal frame count = {total_frame_count}\nfps = {fps}")
     
     # Save data from the comparison between contiguous frames in relation with the brightness
     np.savetxt(f"{frames_path}_stats.txt", frame_stats_list, fmt='%1.4f', delimiter=',', header="frame,min,max,range,std")
@@ -172,8 +168,6 @@ if __name__=='__main__':
     parser.add_argument('vidname', type=str, help='Directory of video (mp4 format).')
     parser.add_argument('-ff', '--first_frame', action='store_true', default=False, help="Number associated with the first frame and from where the count is starting. eg: 'frame0', 'frame1250'.")
     parser.add_argument('-gf', '--get_frames', metavar='frame name', type=int, default=[], nargs='*', help="Get specific complete frame(s) from the video.")
-    parser.add_argument('-cf', '--cropped_frames', action='store_true', default=False, help="Get specific cropped frame(s) from the video.") # metavar='frame', type=int, default=[], nargs='*',
-    # parser.add_argument('-wr', '--write', action='store_true', default=False, help='Enables saving frames when LED is ON.')
 
     # Get parse data
     args = parser.parse_args()

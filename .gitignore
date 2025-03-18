@@ -6,3 +6,4 @@ gpstimetext/*
 **__pycache__/**
 info/*
 vids/
+outdated/**

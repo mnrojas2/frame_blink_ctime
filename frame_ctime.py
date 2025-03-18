@@ -37,6 +37,8 @@ def load_blinkvideofile(file):
     all_lines = cols.split('\n')
 
     vb_data = []
+    frame_count = -1
+    fps = -1
 
     # Read txt data and save in list
     for line in all_lines:
@@ -49,8 +51,12 @@ def load_blinkvideofile(file):
             vidseconds = vid_timedelta.total_seconds()
             
             vb_data.append([int(frame_no), vidseconds, led_color_detected])
+        elif 'total frame count' in line:
+            frame_count = int(line.split('=')[-1])
+        elif 'fps' in line:
+            fps = float(line.split('=')[-1])
     
-    return vb_data
+    return vb_data, frame_count, fps
 
 def filter_dynamic_step(array, tolerance=0.05):
     # Filter elements that are out of periodicity for led blinks (false positives)
@@ -116,19 +122,16 @@ def fill_and_rename(gps_data, vb_data, vb_step):
     # Return the list without missing colors and the indexes of the filled positions.
     return vb_led_fill, indexes
 
-# Main
-def main():
-    gpstime_file = './vids/logfile_1215_171954_camera.txt'
-    videoblinks_file = './vids/C0023_blinks.txt'
-    frames_path = './vids/C0025'
 
-    total_frame_count = 24390
-
+def get_video_ctime(frames_path, gpstime_file):
+    # From a video blinks file (in frames_path) and the RF Source gps time data (containing the moments when the led was set to blink)
+    # get the time of each frame of the video
+    
     # Get GPStime and led data from logfile
     gpstime_data = load_ledlogfile(gpstime_file)
 
     # Open video blinks file
-    vidblinks_data = load_blinkvideofile(videoblinks_file)
+    vidblinks_data, total_frame_count, fps = load_blinkvideofile(frames_path+'_blinks.txt')
 
     # Produce a numpy array only containing the time of detected frames
     vidblinks_time = np.array([blink_event[1] for blink_event in vidblinks_data])
@@ -162,11 +165,12 @@ def main():
     # Get the interpolated time for each frame
     framecount = np.arange((total_frame_count))
     gpstime_framecount = interp_func(framecount)
+    vidtimes = [dt.timedelta(seconds=value) for value in np.arange(total_frame_count)/fps]
 
     # Save the information in a new txt file
-    frame_time = np.column_stack((framecount, gpstime_framecount))
-    np.savetxt(f"{frames_path}_gpstime.txt", frame_time, fmt= '%.6f', delimiter=',', header="frame, timestamp")
-    print(f"Video-GPStime syncronization results in {frames_path}_gpstime.txt!")
+    frame_time = np.column_stack((framecount, vidtimes, gpstime_framecount))
+    np.savetxt(f"{frames_path}_vidctime.txt", frame_time, fmt= '%.6f,%s,%.6f', delimiter=',', header="frame, videotime, ctime")
+    print(f"Video-GPStime syncronization results in {frames_path}_vidctime.txt!")
 
     plt.figure()
     plt.plot([item[0] for item in vidblinks_data], vidblinks_time, '.', c='g')
@@ -177,6 +181,15 @@ def main():
     plt.plot(vidblink_frames, gpstime_timestamp, '.', c='b')
     plt.show()    
 
+
 if __name__ == '__main__':
-    main()
+    # Initialize parser
+    parser = argparse.ArgumentParser(description='Produce a list with all frames where the LED is on.')
+    parser.add_argument('frame_path', type=str, help='Directory of video (mp4 format).')
+    parser.add_argument('gpstime', type=str, help="Number associated with the first frame and from where the count is starting. eg: 'frame0', 'frame1250'.")
+
+    # Get parse data
+    args = parser.parse_args()
+    
+    get_video_ctime(args.frame_path, args.gpstime)
     
