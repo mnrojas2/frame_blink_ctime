@@ -92,7 +92,7 @@ def main():
             
             else:
                 # Crop the frame to get only the LED position
-                ncrop_frame = curr_frame[1677:,3466:,:] 
+                ncrop_frame = curr_frame[1677:,3466:,:] # Change this part if LED has moved of position
                 
                 # Apply a Gaussian blur and convert the matrix from RGB to HSV
                 ncrop_frame_gss = cv.GaussianBlur(ncrop_frame,(251,251),0)
