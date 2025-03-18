@@ -15,4 +15,5 @@ Usage:
     Note 2: The last created file is made to analyze changes to do in line 119, which selects a frame when its standard deviation of the Value channel (HSV), is higher than a threshold (currently 1.1).
 
 2) Run ``python frame_ctime.py <directory of the frames folder> <directory of the RF source LED data>`` to filter the found blink frames and match them with GPStime data from the same flight.
+    
     Returns a txt file indicating video time and gps time for all frames of the video.
