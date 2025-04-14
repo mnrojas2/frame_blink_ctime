@@ -40,11 +40,10 @@ def load_ledlogfile(file):
     return data_rows
 
 
-def main():
-    list_frames = args.get_frames
+def get_ledblinks(vidname, first_frame=False, list_frames=[]):
     
     # Get name of the file only
-    vidfile = os.path.basename(args.vidname)[:-4]
+    vidfile = os.path.basename(vidname)[:-4]
     
     try:
         new_list = [int(os.path.splitext(x.replace('frame', ''))[0]) for x in os.listdir(frames_path)]
@@ -53,7 +52,7 @@ def main():
         new_list = []    
     
     # Load the video e.g: 'C0014'
-    vidcap = cv.VideoCapture(args.vidname)
+    vidcap = cv.VideoCapture(vidname)
     
     # Get total frame count and frames per second
     total_frame_count = int(vidcap.get(cv.CAP_PROP_FRAME_COUNT))
@@ -71,7 +70,7 @@ def main():
     frame_stats_list = []
     
     # Create output folders if they weren't created yet
-    frames_path = os.path.normpath(os.path.dirname(args.vidname))+'/'+vidfile
+    frames_path = os.path.normpath(os.path.dirname(vidname))+'/'+vidfile
     if not os.path.exists(frames_path):
         os.mkdir(frames_path)
 
@@ -80,8 +79,8 @@ def main():
         # Get a frame from the video
         frame_exists, curr_frame = vidcap.read()
         if frame_exists: # and frame_no < 150
-            if args.first_frame:
-                cv.imwrite(f"{args.vidname[:-4]}.jpg", curr_frame)
+            if first_frame:
+                cv.imwrite(f"{vidname[:-4]}.jpg", curr_frame)
                 break
             
             elif list_frames != [] and (frame_no+1) in list_frames:
@@ -173,4 +172,4 @@ if __name__=='__main__':
     args = parser.parse_args()
     
     # Main
-    main()
+    get_ledblinks(args.vidname, args.first_frame, args.get_frames)
