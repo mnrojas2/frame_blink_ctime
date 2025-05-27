@@ -10,8 +10,6 @@ import argparse
 import cv2 as cv
 import numpy as np
 import datetime as dt
-import re
-from scipy.interpolate import interp1d
 from tqdm import tqdm
 
 
@@ -30,9 +28,21 @@ def load_ledlogfile(file):
             rpi_time, led_color = line.split(',')
             # Convert datetime to timestamp
             try:
-                time_dt = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S.%f").timestamp()
+                time_obj = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S.%f")
             except ValueError:
-                time_dt = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S").timestamp()
+                time_obj = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S")
+            
+            # Define the UTC-3 offset
+            utc_minus_3 = dt.timezone(dt.timedelta(hours=-3))
+
+            # Assign the timezone to the datetime object
+            datetime_obj = datetime_obj.replace(tzinfo=utc_minus_3)
+
+            # Convert to UTC before extracting epoch time
+            datetime_obj = datetime_obj.astimezone(dt.timezone.utc)
+
+            # Convert to epoch time
+            time_dt = int(datetime_obj.timestamp())
 
             data_rows.append([time_dt, led_color])
 
@@ -40,7 +50,7 @@ def load_ledlogfile(file):
     return data_rows
 
 
-def get_ledblinks(vidname, first_frame=False, list_frames=[]):
+def get_ledblinks(vidname, first_frame=False, list_frames=[], save_frames=False):
     
     # Get name of the file only
     vidfile = os.path.basename(vidname)[:-4]
@@ -62,7 +72,7 @@ def get_ledblinks(vidname, first_frame=False, list_frames=[]):
     vidtimes = np.arange(total_frame_count)/fps
 
     # Set counters for all frames and for last frame with a peak (LED turned on)
-    pbar = tqdm(desc='READING FRAMES', total=total_frame_count, unit=' frames')
+    pbar = tqdm(desc='READING FRAMES', total=total_frame_count, unit=' frames', dynamic_ncols=True, miniters=1)
     frame_no = -1
 
     # Set lists to save data
@@ -70,9 +80,10 @@ def get_ledblinks(vidname, first_frame=False, list_frames=[]):
     frame_stats_list = []
     
     # Create output folders if they weren't created yet
-    frames_path = os.path.normpath(os.path.dirname(vidname))+'/'+vidfile
-    if not os.path.exists(frames_path):
-        os.mkdir(frames_path)
+    if save_frames:
+        frames_path = os.path.normpath(os.path.dirname(vidname))+'/'+vidfile
+        if not os.path.exists(frames_path):
+            os.mkdir(frames_path)
 
     # Whileloop
     while(vidcap.isOpened()):
@@ -91,7 +102,8 @@ def get_ledblinks(vidname, first_frame=False, list_frames=[]):
             
             else:
                 # Crop the frame to get only the LED position
-                ncrop_frame = curr_frame[1677:,3466:,:] # Change this part if LED has moved of position
+                # ncrop_frame = curr_frame[1677:,3466:,:] # Change this part if LED has moved of position # TOCO TESTS DECEMBER
+                ncrop_frame = curr_frame[1920:,3720:,:]
                 
                 # Apply a Gaussian blur and convert the matrix from RGB to HSV
                 ncrop_frame_gss = cv.GaussianBlur(ncrop_frame,(251,251),0)
@@ -118,20 +130,27 @@ def get_ledblinks(vidname, first_frame=False, list_frames=[]):
                     if np.std((av_crop_frame_o[2], av_crop_frame_c[2], av_crop_frame_n[2])) > 1.1: # Arbitrary value after experimentation. If something is failing, it could be this.
                         # If the middle frame has the highest value, then a peak is found
                         if av_crop_frame_o[2] < av_crop_frame_c[2] and av_crop_frame_n[2] < av_crop_frame_c[2]:
-                            # Save the image
-                            cv.imwrite(f"{frames_path}/frame{frame_no}.jpg", ccrop_frame)
+                            # Define hue as variable for readability 
+                            hue = av_crop_frame_c[0]
                             
-                            # Get the color of the frame
-                            if av_crop_frame_c[0] < 10 or 140 < av_crop_frame_c[0]: 
-                                led_col = 'r' 
-                            elif 30 < av_crop_frame_c[0] < 100:
+                            # Check if image can contain a blink by comparing its hue value with red and blue colors
+                            potential_blink = hue < 15 or (25 < hue < 105) or hue > 135
+                            
+                            # Assign LED color
+                            led_col = 'undefined'
+                            if hue < 10 or hue > 140:
+                                led_col = 'r'
+                            elif 30 < hue < 100:
                                 led_col = 'g'
-                            else:
-                                led_col = 'undefined'
                             
-                            # Save the frame name, video time and color defined
-                            # print('\n', frame_no, dt.timedelta(seconds=vidtimes[frame_no]))
-                            frame_blink_list.append([frame_no, dt.timedelta(seconds=vidtimes[frame_no]), led_col])
+                            # If the image was detected in any of the 3 cases, save the image and add data to the list
+                            if potential_blink:
+                                # Save the image
+                                if save_frames:
+                                    cv.imwrite(f"{frames_path}/frame{frame_no}.jpg", ccrop_frame)
+                                
+                                # Save the frame name, video time and color defined
+                                frame_blink_list.append([frame_no, dt.timedelta(seconds=vidtimes[frame_no]), led_col])
                         
                     # Update old frames for next loop.
                     ocrop_frame_hsv = ccrop_frame_hsv

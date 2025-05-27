@@ -4,6 +4,7 @@ import os
 import argparse
 import numpy as np
 import datetime as dt
+import pytz
 from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 
@@ -22,9 +23,24 @@ def load_ledlogfile(file):
             rpi_time, led_color = line.split(',')
             # Convert datetime to timestamp
             try:
-                time_dt = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S.%f").timestamp()
+                time_obj = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S.%f")
             except ValueError:
-                time_dt = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S").timestamp()
+                time_obj = dt.datetime.strptime(rpi_time, "%Y:%m:%d:%H:%M:%S")
+            
+            # # # Define the UTC-3 offset
+            # utc_minus_3 = dt.timezone(dt.timedelta(hours=-3))
+
+            # # Assign the timezone to the datetime object
+            # time_obj = time_obj.replace(tzinfo=utc_minus_3)
+
+            # # Convert to UTC before extracting epoch time
+            # time_obj = time_obj.astimezone(dt.timezone.utc)
+            
+            # Convert to timezone-aware datetime (e.g., UTC)
+            time_obj = pytz.timezone("Etc/GMT+3").localize(time_obj)
+
+            # Convert to epoch time
+            time_dt = int(time_obj.timestamp())
 
             data_rows.append([time_dt, led_color])
 
@@ -123,15 +139,15 @@ def fill_and_rename(gps_data, vb_data, vb_step):
     return vb_led_fill, indexes
 
 
-def get_video_ctime(frames_path, gpstime_file):
+def get_video_ctime(video_path, blinktime_file):
     # From a video blinks file (in frames_path) and the RF Source gps time data (containing the moments when the led was set to blink)
     # get the time of each frame of the video
     
     # Get GPStime and led data from logfile
-    gpstime_data = load_ledlogfile(gpstime_file)
+    gpstime_data = load_ledlogfile(blinktime_file)
 
-    # Open video blinks file
-    vidblinks_data, total_frame_count, fps = load_blinkvideofile(frames_path+'_blinks.txt')
+    # Open video blinks file (same name as video plus '_blinks.txt')
+    vidblinks_data, total_frame_count, fps = load_blinkvideofile(os.path.basename(video_path)[:-4]+'_blinks.txt')
 
     # Produce a numpy array only containing the time of detected frames
     vidblinks_time = np.array([blink_event[1] for blink_event in vidblinks_data])
@@ -169,8 +185,8 @@ def get_video_ctime(frames_path, gpstime_file):
 
     # Save the information in a new txt file
     frame_time = np.column_stack((framecount, vidtimes, gpstime_framecount))
-    np.savetxt(f"{frames_path}_vidctime.txt", frame_time, fmt= '%.6f,%s,%.6f', delimiter=',', header="frame, videotime, ctime")
-    print(f"Video-GPStime syncronization results in {frames_path}_vidctime.txt!")
+    np.savetxt(f"{video_path}_vidctime.txt", frame_time, fmt= '%.6f,%s,%.6f', delimiter=',', header="frame, videotime, ctime")
+    print(f"Video-GPStime syncronization results in {video_path}_vidctime.txt!")
 
     plt.figure()
     plt.plot([item[0] for item in vidblinks_data], vidblinks_time, '.', c='g')
@@ -179,7 +195,7 @@ def get_video_ctime(frames_path, gpstime_file):
     plt.figure()
     plt.plot(framecount, gpstime_framecount, '.', c='y')
     plt.plot(vidblink_frames, gpstime_timestamp, '.', c='b')
-    plt.show()    
+    plt.show()
 
 
 if __name__ == '__main__':
